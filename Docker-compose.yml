@@ -1,33 +1,34 @@
-service:
+services:
   nginx:
     build:
       context: ./nginx
       dockerfile: Dockerfile
     image: glpi:nginx
-    hostname: glpi-nginx
+    hostname: web
     container_name: glpi-nginx
     ports:
       - "80:80"
     depends_on:
-      - php
-          condition: service_healthy
+      php:
+        condition: service_healthy
     volumes:
       - glpi:/var/www/glpi
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl", "-f", "http://localhost" || exit 1]
+      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 5
     networks:
       - glpinet
+
   php:
     build:
       context: ./php-fpm
       dockerfile: Dockerfile
-    image: glpi:php
-    hostname: glpi-php
-    container_name: glpi-php
+    image: glpi:fpm
+    hostname: glpi
+    container_name: glpi-fpm
     environment:
       - GLPI_DB_HOST=${GLPI_DB_HOST}
       - GLPI_DB_PORT=${GLPI_DB_PORT}
@@ -36,42 +37,50 @@ service:
       - GLPI_DB_PASSWORD=${GLPI_DB_PASSWORD}
       - GLPI_LANGUAGE=${GLPI_LANGUAGE}
       - GLPI_ADMIN_USER=${GLPI_ADMIN_USER}
-    volumes:
-      - glpi:/var/www/glpi
     expose:
       - 9000
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - glpi:/var/www/glpi
     restart: unless-stopped
     networks:
       - glpinet
     healthcheck:
-      test: ["CMD-SHELL", "php-fpm -t || exit 1" || exit 1]
+      test: ["CMD-SHELL", "php-fpm -t || exit 1"]
       interval: 30s
       timeout: 5s
+      retries: 5
+
   db:
-    image: mysql:lts 
-    hostname: glpi-db
+    image: mysql:lts
+    hostname: mysql
     container_name: glpi-db
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=${GLPI_DB_DATABASE}
       - MYSQL_USER=${GLPI_DB_USER}
       - MYSQL_PASSWORD=${GLPI_DB_PASSWORD}
+    expose:
+      - 3306
+    ports:
+      - "6033:3306"
     volumes:
-      - glpi-db:/var/lib/mysql
+      - dbdata:/var/lib/mysql
       - ./mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
     restart: unless-stopped
     networks:
       - glpinet
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost" || exit 1]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost || exit 1"]
+      interval: 10s
+      timeout: 5s
       retries: 5
+
 networks:
-  glpinet
+  glpinet:
+
 volumes:
-  glpi-db:
+  dbdata:
   glpi:

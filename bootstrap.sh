@@ -1,58 +1,53 @@
 #!/bin/bash
 
-# Định nghĩa đường dẫn thư mục mã nguồn và plugin
+
+# Define directories
 source_code_dir="sources"
 plugins_dir="$source_code_dir/plugins"
-glpi_download_url=$(curl -s https://api.github.com/repos/glpi-project/glpi/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4 | grep '.tgz')
 
-# Kiểm tra URL tải về
-if [ -z "$glpi_download_url" ]; then
-    echo "Failed to find the GLPI download URL. Please check the API response or connectivity."
-    exit 1
-fi
-
-# Bước 1: Tải xuống GLPI nếu chưa có
-echo "Downloading GLPI..."
-echo "==================="
-if [ ! -f "$source_code_dir/glpi-latest.tgz" ]; then
-    mkdir -p $source_code_dir
-    wget -O $source_code_dir/glpi-latest.tgz "$glpi_download_url"
-    if [ $? -ne 0 ]; then
-        echo "Download failed! Check the URL or your internet connection."
-        exit 1
-    fi
+# Load GLPI_VERSION from .env file
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
 else
-    echo "GLPI archive already exists. Skipping download."
+    mv .env.sample .env
+    export $(grep -v '^#' .env | xargs)
 fi
 
-# Bước 2: Dọn dẹp thư mục cũ nếu có
-echo "Cleaning directories..."
-echo "======================="
-rm -rf glpi nginx/glpi php-fpm/glpi
+# Check if the GLPI source file exists, if not download it
+if [ ! -f "$source_code_dir/glpi-${GLPI_VERSION}.tgz" ]; then
+    echo "Downloading GLPI source..."
+    mkdir -p $source_code_dir
+    wget -P "$source_code_dir" "https://github.com/glpi-project/glpi/releases/download/${GLPI_VERSION}/glpi-${GLPI_VERSION}.tgz"
+fi
 
-# Bước 3: Giải nén các tệp mã nguồn và plugin
+# Check if the GLPI SAML plugin file exists, if not download it
+if [ ! -f "$plugins_dir/glpisaml.zip" ]; then
+    echo "Downloading GLPI SAML plugin..."
+    mkdir -p $plugins_dir
+    wget -P "$plugins_dir" "https://codeberg.org/QuinQuies/glpisaml/releases/download/${GLPI_SAML_VERSION}/glpisaml.zip"
+fi
+
+# Extract the GLPI source code
 echo "Extracting sources..."
 echo "====================="
-tar -xvzf $source_code_dir/glpi-latest.tgz -C .
+mkdir -p glpi
+tar -xvzf $source_code_dir/glpi-${GLPI_VERSION}.tgz -C glpi --strip-components=1
 
-if [ -d "$plugins_dir" ]; then
-    unzip "$plugins_dir/glpi*.zip" -d glpi/plugins/
-else
-    echo "Plugin directory not found!"
-    exit 1
-fi
+# Extract the GLPI SAML plugin
+unzip $plugins_dir/glpisaml.zip -d glpi/plugins/
+# rm -rf $source_code_dir/glpisaml.tgz $plugins_dir/glpi*.zip
 
-# Bước 4: Sao chép mã nguồn vào thư mục cần thiết
+# Copy the GLPI source and GLPI SAML plugin to the nginx and php-fpm directories
 echo "Copying files..."
-echo "================"
+rm -rf nginx/glpi php-fpm/glpi
 cp -a glpi nginx/glpi
 cp -a glpi php-fpm/glpi
 
-# Bước 5: Xây dựng và chạy Docker
+# Run docker compose
 echo "Building docker images..."
 echo "========================="
 docker compose up -d --build
+docker compose ps
 
-# Hoàn tất
 echo "Done!"
 echo "========================="
