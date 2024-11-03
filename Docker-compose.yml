@@ -1,0 +1,77 @@
+service:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    image: glpi:nginx
+    hostname: glpi-nginx
+    container_name: glpi-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - php
+          condition: service_healthy
+    volumes:
+      - glpi:/var/www/glpi
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl", "-f", "http://localhost" || exit 1]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - glpinet
+  php:
+    build:
+      context: ./php-fpm
+      dockerfile: Dockerfile
+    image: glpi:php
+    hostname: glpi-php
+    container_name: glpi-php
+    environment:
+      - GLPI_DB_HOST=${GLPI_DB_HOST}
+      - GLPI_DB_PORT=${GLPI_DB_PORT}
+      - GLPI_DB_DATABASE=${GLPI_DB_DATABASE}
+      - GLPI_DB_USER=${GLPI_DB_USER}
+      - GLPI_DB_PASSWORD=${GLPI_DB_PASSWORD}
+      - GLPI_LANGUAGE=${GLPI_LANGUAGE}
+      - GLPI_ADMIN_USER=${GLPI_ADMIN_USER}
+    volumes:
+      - glpi:/var/www/glpi
+    expose:
+      - 9000
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - glpinet
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t || exit 1" || exit 1]
+      interval: 30s
+      timeout: 5s
+  db:
+    image: mysql:lts 
+    hostname: glpi-db
+    container_name: glpi-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${GLPI_DB_DATABASE}
+      - MYSQL_USER=${GLPI_DB_USER}
+      - MYSQL_PASSWORD=${GLPI_DB_PASSWORD}
+    volumes:
+      - glpi-db:/var/lib/mysql
+      - ./mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
+    restart: unless-stopped
+    networks:
+      - glpinet
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost" || exit 1]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+networks:
+  glpinet
+volumes:
+  glpi-db:
+  glpi:
