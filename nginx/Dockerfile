@@ -1,6 +1,8 @@
 FROM nginx:stable
 
-
+# Add LABEL instructions
+LABEL author="HoangBeard - <github.com/hoangbeard>" \
+    description="Nginx image for web applications"
 
 # Install the necessary dependencies
 RUN apt-get update && apt-get install -y \
@@ -19,5 +21,12 @@ WORKDIR /var/www/glpi
 COPY --chown=www-data:www-data glpi/ ./
 
 
+RUN chmod 2775 /var/www/glpi && \
+    find /var/www/glpi -type d -exec chmod 2775 {} \; && \
+    find /var/www/glpi -type f -exec chmod 0664 {} \;
+    
 # Expose the port the app runs in
 EXPOSE 80
+
+# Set default command to run Nginx in foreground mode
+CMD ["nginx", "-g", "daemon off;"]
