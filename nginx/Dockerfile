@@ -13,8 +13,24 @@ RUN apt-get update && apt-get install -y \
     rm -rf /usr/share/nginx/html/*
 
 # Copy the nginx config
+FROM nginx:stable
+
+# Add LABEL instructions
+LABEL author="HoangBeard - <github.com/hoangbeard>" \
+    description="Nginx image for web applications"
+
+# Install the other dependencies
+RUN apt-get update && apt-get install -y \
+    nano && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -rf /etc/nginx/conf.d/* && \
+    rm -rf /usr/share/nginx/html/*
+
+# Copy Nginx configuration
 COPY config/nginx.conf /etc/nginx/nginx.conf
-COPY /nginx/nginx_web.conf /etc/nginx/conf.d/default.conf
+COPY config/nginx_web.conf /etc/nginx/conf.d/default.conf
+
 
 # Copy working directory
 WORKDIR /var/www/glpi
