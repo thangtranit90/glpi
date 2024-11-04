@@ -1,0 +1,1 @@
+Chay file bootstrap nếu triển khai trên server on-premise
