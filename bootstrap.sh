@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # Define directories
 source_code_dir="sources"
 plugins_dir="$source_code_dir/plugins"
@@ -35,13 +34,16 @@ tar -xvzf $source_code_dir/glpi-${GLPI_VERSION}.tgz -C glpi --strip-components=1
 
 # Extract the GLPI SAML plugin
 unzip $plugins_dir/glpisaml.zip -d glpi/plugins/
-# rm -rf $source_code_dir/glpisaml.tgz $plugins_dir/glpi*.zip
 
 # Copy the GLPI source and GLPI SAML plugin to the nginx and php-fpm directories
 echo "Copying files..."
 rm -rf nginx/glpi php-fpm/glpi
 cp -a glpi nginx/glpi
 cp -a glpi php-fpm/glpi
+
+# Remove sources after copying
+echo "Cleaning up source files..."
+rm -rf glpi $source_code_dir
 
 # Run docker compose
 echo "Building docker images..."
