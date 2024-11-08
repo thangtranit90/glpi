@@ -1,3 +1,23 @@
+# Stage 1: Build stage
+FROM nginx:alpine AS builder
+
+
+
+
+# Create working directory and download GLPI
+WORKDIR /tmp/downloads
+RUN echo "Downloading GLPI source..." && \
+    curl -L "https://github.com/glpi-project/glpi/releases/download/${GLPI_VERSION}/glpi-${GLPI_VERSION}.tgz" -o "glpi-${GLPI_VERSION}.tgz" && \
+    mkdir -p /tmp/glpi && \
+    tar -xvzf "glpi-${GLPI_VERSION}.tgz" -C /tmp/glpi --strip-components=1
+
+# Create plugins directory and download GLPI SAML plugin
+RUN mkdir -p /tmp/glpi/plugins && \
+    echo "Downloading GLPI SAML plugin..." && \
+    curl -L "https://codeberg.org/QuinQuies/glpisaml/releases/download/${GLPI_SAML_VERSION}/glpisaml.zip" -o "glpisaml.zip" && \
+    unzip glpisaml.zip -d /tmp/glpi/plugins/
+
+# Stage 2: Final image
 FROM php:8.2-fpm
 
 # Add LABEL instructions
@@ -46,7 +66,7 @@ COPY docker-entrypoint.sh /
 
 # Copy source
 WORKDIR /var/www/glpi
-COPY --chown=www-data:www-data glpi/ ./
+COPY --from=builder /tmp/glpi /var/www/glpi
 
 # Set correct permissions and remove unnecessary files
 RUN chmod 2775 /var/www/glpi && \

@@ -39,9 +39,32 @@ pipeline {
         NEW_TASK_INFO=""
         NEW_REVISION=""
         TASK_FAMILY=""
-        
+        GLPI_VERSION = ""
+        GLPI_SAML_VERSION = ""        
     }
     stages {
+        stage('Load Environment Variables') {
+            when {
+                anyOf {
+                    environment name : 'BUILD', value: 'true'
+                }
+            }            
+            steps {
+                stage_title('======== Load enviroment from file========')
+                script {
+                    def envFile = readFile('.env')
+                    envFile.split('\n').each { line ->
+                        if (!line.startsWith("#") && line.contains("=")) {
+                            def parts = line.split("=")
+                            def key = parts[0].trim()
+                            def value = parts[1].trim()
+                            env[key] = value
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Build and Push App Image') {
             when {
                 anyOf {
@@ -55,7 +78,6 @@ pipeline {
                             aws ecr get-login-password --region ${AWS_REGION} | \
                             docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
                         '''
-
                         // Build and push image to ECR
                         step_title('Build and push image to ECR')
                         sh """
