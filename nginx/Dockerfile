@@ -1,8 +1,5 @@
 FROM nginx:stable
 
-# Add LABEL instructions
-LABEL author="HoangBeard - <github.com/hoangbeard>" \
-    description="Nginx image for web applications"
 
 # Install the necessary dependencies
 RUN apt-get update && apt-get install -y \
