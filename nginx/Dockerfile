@@ -15,9 +15,6 @@ RUN apt-get update && apt-get install -y \
 # Copy the nginx config
 FROM nginx:stable
 
-# Add LABEL instructions
-LABEL author="HoangBeard - <github.com/hoangbeard>" \
-    description="Nginx image for web applications"
 
 # Install the other dependencies
 RUN apt-get update && apt-get install -y \
