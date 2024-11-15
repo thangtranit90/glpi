@@ -1,8 +1,6 @@
 FROM php:8.2-fpm
 
-# Add LABEL instructions
-LABEL author="HoangBeard - <github.com/hoangbeard>" \
-    description="PHP-FPM image for web applications."
+
 
 # Install the necessary dependencies
 RUN apt-get update && apt-get install -y \
