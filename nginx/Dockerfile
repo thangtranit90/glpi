@@ -1,33 +1,15 @@
-# Stage 1: Build stage
-FROM nginx:alpine AS builder
-
-
-
-# Create working directory and download GLPI
-WORKDIR /tmp/downloads
-RUN echo "Downloading GLPI source..." && \
-    curl -L "https://github.com/glpi-project/glpi/releases/download/${GLPI_VERSION}/glpi-${GLPI_VERSION}.tgz" -o "glpi-${GLPI_VERSION}.tgz" && \
-    mkdir -p /tmp/glpi && \
-    tar -xvzf "glpi-${GLPI_VERSION}.tgz" -C /tmp/glpi --strip-components=1
-
-# Create plugins directory and download GLPI SAML plugin
-RUN mkdir -p /tmp/glpi/plugins && \
-    echo "Downloading GLPI SAML plugin..." && \
-    curl -L "https://codeberg.org/QuinQuies/glpisaml/releases/download/${GLPI_SAML_VERSION}/glpisaml.zip" -o "glpisaml.zip" && \
-    unzip glpisaml.zip -d /tmp/glpi/plugins/
-
-# Stage 2: Final image
 FROM nginx:stable
 
 # Add LABEL instructions
-LABEL author="HoangBeard - <github.com/hoangbeard>" \
-      description="Nginx image for GLPI web applications with SAML plugin"
-
-# Install additional dependencies (optional)
+LABEL author="SYSOP Team"
+# Install the other dependencies
 RUN apt-get update && apt-get install -y \
+    procps \
     nano && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* \
+    rm -rf /etc/nginx/conf.d/* \
+    rm -rf /usr/share/nginx/html/*
 
 # Copy Nginx configuration
 COPY config/nginx.conf /etc/nginx/nginx.conf
@@ -36,19 +18,31 @@ COPY config/nginx_web.conf /etc/nginx/conf.d/default.conf
 # Copy the docker-entrypoint.sh script to the root directory
 COPY docker-entrypoint.sh /
 
-# Copy GLPI source and SAML plugin from the builder stage
+# Copy source
+COPY --chown=nginx:nginx glpi/public /var/www/glpi/public
 
+# Set correct permissions and remove unnecessary files
+RUN chmod 2775 /var/www/glpi/public && \
+    find /var/www/glpi/public -type d -exec chmod 2775 {} \; && \
+    find /var/www/glpi/public -type f -exec chmod 0664 {} \; && \
+    chmod +x /docker-entrypoint.sh 
+# && \
+# mkdir -p /var/cache/nginx && \
+# chown -R nginx:nginx /var/cache/nginx && \
+# chmod -R 755 /var/cache/nginx
 
-# Set correct permissions for GLPI directory
-RUN chmod 2775 /var/www/glpi && \
-    find /var/www/glpi -type d -exec chmod 2775 {} \; && \
-    find /var/www/glpi -type f -exec chmod 0664 {} \;
+# Set default workdir and expose port 80 for HTTP
+WORKDIR /var/www/glpi/public
+EXPOSE 80
+
+# Switch to the www-data user
+# USER nginx
 
 # Set the entrypoint for the container to be the docker-entrypoint.sh script
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
-# Expose port 80 for HTTP
-EXPOSE 80
-
 # Set default command to run Nginx in foreground mode
 CMD ["nginx", "-g", "daemon off;"]
+
+# Persistent data storage volume and guide ECS to configure volume bind mount points
+# VOLUME [ "/glpi-data" ]

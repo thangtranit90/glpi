@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glpi-nginx
+  labels:
+    app: glpi-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: glpi-nginx
+  template:
+    metadata:
+      labels:
+        app: glpi-nginx
+    spec:
+      containers:
+        - name: "glpi-nginx"
+          image: 
+          ports:
+            - containerPort: 8080
+          env:
+            - name: FASTCGI_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: glpi-secret
+                  key: FASTCGI_PASS
+          volumeMounts:
+            - name: glpi
+              mountPath: /var/www/glpi

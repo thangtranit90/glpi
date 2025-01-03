@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # Check if arguments are provided and validate
 if [ $# -ne 1 ]; then
     echo "Usage: $0 [build|push|build-push|compose]"

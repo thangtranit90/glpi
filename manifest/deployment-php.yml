@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glpi-php
+  labels:
+    app: glpi-php
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: glpi-php
+  template:
+    metadata:
+      labels:
+        app: glpi-php
+    spec:
+      containers:
+        - name: "glpi-php"
+          image: php:7.4-fpm
+          ports:
+            - containerPort: 9000
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - php-fpm -t || exit 1
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          env:
+            - name: GLPI_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: glpi-secret
+                  key: GLPI_DB_HOST
+            - name: GLPI_DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: glpi-secret
+                  key: GLPI_DB_PORT
+            - name: GLPI_DB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: glpi-secret
+                  key: GLPI_DB_DATABASE
+            - name: GLPI_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: glpi-secret
+                  key: GLPI_DB_USER
+            - name: GLPI_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: glpi-secret
+                  key: GLPI_DB_PASSWORD
+            - name: GLPI_LANGUAGE
+              valueFrom:
+                secretKeyRef:
+                  name: glpi-secret
+                  key: GLPI_LANGUAGE
+            - name: GLPI_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: glpi-secret
+                  key: GLPI_ADMIN_USER
+          volumeMounts:
+            - name: glpi-persistent-storage
+              mountPath: /var/www/glpi
+      volume: 
+        - name: glpi-persistent-storage
+          persistentVolumeClaim:
+            claimName: glpi-pvc
+
